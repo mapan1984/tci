@@ -1,19 +1,16 @@
 from __future__ import print_function
+
 import sys
 import json
 import argparse
 
 try:
-    from urllib2 import urlopen
-except ImportError:
     from urllib.request import urlopen
-
-try:
-    from urllib import urlencode
-except ImportError:
     from urllib.parse import urlencode
+except ImportError:
+    from urllib import urlencode
+    from urllib2 import urlopen
 
-eprint = sys.stderr.write
 
 url = r'''http://fanyi.youdao.com/openapi.do'''
 
@@ -25,36 +22,39 @@ data = {
     'version': '1.1',
 }
 
+
 def get_response(word):
     data['q'] = word
     url_values = urlencode(data)
     full_url = url + '?' + url_values
     try:
         result = urlopen(full_url).read()
-    except:
-        eprint("ERROR: Can not make network connection")
+    except Exception:
+        print("ERROR: Can not make network connection", file=sys.stderr)
         return None
     else:
         try:
-            return json.loads(result, encoding='utf-8')
-        except:
-            eprint("ERROR: Can not translate %s" % word)
+            return json.loads(result.decode('utf-8'))
+        except Exception:
+            print("ERROR: Can not translate %s" % word, file=sys.stderr)
             return None
+
 
 def is_valid_result(result):
     error_code = result.get('errorCode')
     if error_code == 0:
         return True
     else:
-        eprint("ERROR: can't translate %s" % result.get("query"))
+        print("ERROR: can't translate %s" % result.get("query"), file=sys.stderr)
         return False
+
 
 def show_summary(result):
     translation = result.get('translation')
     if translation:
         print('Translation:')
         for t in translation:
-            print('\t', t.encode('utf-8').decode('utf-8'))
+            print('\t', t)
 
 
 def show_explains(result):
@@ -64,7 +64,8 @@ def show_explains(result):
         if explains:
             print('Explains:')
             for e in explains:
-                print('\t', e.encode('utf-8').decode('utf-8'))
+                print('\t', e)
+
 
 def show_web(result):
     web = result.get('web')
@@ -73,7 +74,7 @@ def show_web(result):
         for item in web:
             print("\tKey: ", item.get('key').encode('utf-8'))
             for v in item.get('value'):
-                print('\t\tValue: ', v.encode('utf-8').decode('utf-8'))
+                print('\t\tValue: ', v)
 
 
 def main():
@@ -90,10 +91,8 @@ def main():
     args = parser.parse_args()
 
     esc = r''',./<>?:;'"{}[]|\~`!@#$%^&*()-_=+'''
-
     word = args.word.strip(esc)
     print('[', word, ']')
-
 
     result = get_response(word)
 
@@ -103,6 +102,7 @@ def main():
         show_explains(result)
     if args.web:
         show_web(result)
+
 
 if __name__ == '__main__':
     main()
